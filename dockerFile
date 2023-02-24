@@ -1,0 +1,65 @@
+FROM python:3.8.3-alpine3.11 as base
+
+#RUN apk --no-cache add curl
+#
+#RUN curl -O https://download.microsoft.com/download/e/4/e/e4e67866-dffd-428c-aac7-8d28ddafb39b/msodbcsql17_17.5.2.2-1_amd64.apk && \
+#apk add --allow-untrusted msodbcsql17_17.5.2.2-1_amd64.apk
+
+
+FROM python:3.8 as build
+
+WORKDIR /app
+
+#RUN apk update && apk add\
+#        libuuid \
+#        pcre \
+#        mailcap \
+#        gcc \
+#        libc-dev \
+#        linux-headers \
+#        pcre-dev \
+#        && apk --no-cache add build-base
+#
+#RUN curl -O https://download.microsoft.com/download/e/4/e/e4e67866-dffd-428c-aac7-8d28ddafb39b/msodbcsql17_17.5.2.2-1_amd64.apk && \
+#apk add --allow-untrusted msodbcsql17_17.5.2.2-1_amd64.apk
+
+#WORKDIR /app/
+
+COPY ./requirements.txt /app/requirements.txt
+
+RUN pip config  set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple  \
+    && pip install -r requirements.txt
+
+FROM base as final
+
+COPY --from=build /usr/local/lib/python3.8/site-packages /usr/local/lib/python3.8/site-packages
+
+RUN sed -i 's!http://dl-cdn.alpinelinux.org/!https://mirrors.ustc.edu.cn/!g' /etc/apk/repositories \
+    && apk update && apk add \
+        libuuid \
+        pcre \
+        mailcap \
+        gcc \
+        libc-dev \
+        linux-headers \
+        pcre-dev \
+    && pip config  set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+    && pip install --no-cache-dir uWSGI>=2.0.15 \
+    && apk del \
+        gcc \
+        libc-dev \
+        linux-headers \
+    && rm -rf /tmp/*
+
+WORKDIR /app
+
+COPY . /app/
+
+#WORKDIR /
+
+EXPOSE 12369
+
+#ENTRYPOINT [ "uwsgi", "--ini","uwsgi.ini" ]
+#ENTRYPOINT ["python","app.py"]
+#CMD python app.py
+ENTRYPOINT ["uwsgi", "--http", "0.0.0.0:5000", "--wsgi-file", "app.py", "--callable", "app", "--processes", "2", "--threads", "4"]
