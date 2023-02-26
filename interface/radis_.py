@@ -6,7 +6,7 @@ class RedisHelper:
         host = "127.0.0.1"
         port = 6379
         db = 5
-        self.redis = redis.Redis(host=host, port=port, db=db, password="seven")
+        self.redis = redis.Redis(host=host, port=port, db=db, password="s")
 
     def set(self, key, value):
         return self.redis.set(key, value)
